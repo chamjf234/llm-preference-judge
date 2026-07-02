@@ -1,0 +1,21 @@
+# === Datos y ML clásico (Fase 1 - baseline) ===
+pandas
+numpy
+scikit-learn
+
+# === Fine-tuning de transformers (Fase 2) ===
+torch
+transformers
+datasets
+accelerate
+sentencepiece          # DeBERTa-v3 usa un tokenizer SentencePiece
+
+# === App de demo (Fase 4) ===
+gradio
+
+# === Utilidades ===
+tqdm
+
+# === Stretch: LoRA/QLoRA sobre un decoder (descomentar cuando se llegue) ===
+# peft
+# bitsandbytes

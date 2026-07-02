@@ -1,0 +1,22 @@
+# --- Datos: se descargan de Kaggle, no se versionan ---
+data/
+*.csv
+
+# --- Artefactos de modelo: van a HuggingFace Hub, no al repo ---
+models/
+checkpoints/
+*.bin
+*.safetensors
+*.pt
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# --- Entorno / secrets ---
+.env
+kaggle.json
