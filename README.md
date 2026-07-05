@@ -26,9 +26,15 @@ multiclase, así que no basta con acertar la clase: importa dar **probabilidades
 ## Resultados
 | Método | Log loss (validación) |
 |---|---|
-| Aleatorio (ln 3) | ~1.099 |
-| TF-IDF + LogReg | _pendiente_ |
+| Aleatorio (ln 3) | 1.099 |
+| TF-IDF + LogReg — texto combinado (ciego a A/B) | 1.119 |
+| TF-IDF + LogReg — diferencia tfidf(A)−tfidf(B) | **1.092** |
 | DeBERTa-v3 (fine-tuned) | _pendiente_ |
+
+> El baseline clásico apenas supera el azar (+0.007), y solo cuando las features respetan la
+> estructura A/B del problema. Bag-of-words no "entiende" calidad ni coherencia — que es lo que
+> decide la preferencia humana. De ahí el salto a un transformer en la Fase 2.
+> Validación con split **agrupado por prompt** (evita fuga entre train y val).
 
 ## Demo
 _Pendiente: enlace a la app en HuggingFace Spaces + captura._
