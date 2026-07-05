@@ -79,6 +79,33 @@ def add_parsed_text(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+# Fold que usará la Fase 2 (DeBERTa) como validación. Entrenar un transformer 5 veces
+# no es viable en GPU gratis, así que se entrena UNA vez sobre un fold fijo — y para que
+# la comparación baseline vs DeBERTa sea manzanas con manzanas, ese fold queda fijado aquí.
+CANONICAL_FOLD = 0
+
+
+def grouped_folds(df: pd.DataFrame, n_splits: int = 5):
+    """Folds de validación agrupados por prompt (ver EDA: prompts repetidos → fuga).
+
+    GroupKFold en vez de GroupShuffleSplit por dos razones:
+    - Cubre TODO el dataset: cada fila cae en validación exactamente una vez, así la
+      media entre folds usa todos los datos (un solo split 80/20 tiene varianza de
+      muestreo: ±0.005 de log loss puede ser ruido del split y no una mejora real).
+    - Es determinista (no acepta seed): mismo df → mismos folds, en local o en Kaggle,
+      sin depender de sincronizar random_state entre entornos.
+
+    Llamar DESPUÉS de add_parsed_text: agrupar por texto parseado une además prompts
+    que solo diferían en escapes del JSON crudo.
+    """
+    # Import local: así data.py sigue siendo importable sin sklearn instalado
+    # (la app de la Fase 4 usa este módulo pero no necesita hacer splits).
+    from sklearn.model_selection import GroupKFold
+
+    gkf = GroupKFold(n_splits=n_splits)
+    return list(gkf.split(df, groups=df["prompt"]))
+
+
 def format_pair(prompt: str, response_a: str, response_b: str) -> str:
     """Une prompt + 2 respuestas en un solo texto para el modelo.
 
