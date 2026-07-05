@@ -88,3 +88,24 @@ def test_encode_pair_cede_presupuesto_a_la_respuesta_larga(tok):
     # si B es larga y A corta, B debe poder usar el sobrante de A:
     # el total llega (casi) al máximo en vez de quedarse a mitad
     assert len(enc["input_ids"]) > train.MAX_LEN - 10
+
+
+import numpy as np
+
+
+class _FakeTrainer:
+    """Devuelve logits fijos: simula un modelo con sesgo posicional puro hacia A."""
+    def predict(self, ds):
+        logits = np.tile(np.array([[2.0, 0.0, 0.0]]), (len(ds), 1))  # siempre "gana A"
+        return type("P", (), {"predictions": logits})()
+
+
+def test_tta_anula_el_sesgo_posicional(tok):
+    df = pd.DataFrame({
+        "prompt": ["p"], "response_a": ["aaa"], "response_b": ["bbb"], "_y": [0],
+    })
+    proba = train.predict_proba_tta(_FakeTrainer(), tok, df, max_len=64)
+    # un modelo que SIEMPRE dice "gana A" en ambos órdenes debe quedar 50/50 tras TTA
+    assert proba.shape == (1, 3)
+    assert abs(proba[0, 0] - proba[0, 1]) < 1e-9
+    assert abs(proba.sum() - 1.0) < 1e-6
