@@ -4,17 +4,21 @@ numpy
 scikit-learn
 
 # === Fine-tuning de transformers (Fase 2) ===
-torch
-transformers
-datasets
-accelerate
-sentencepiece          # DeBERTa-v3 usa un tokenizer SentencePiece
+# Versiones fijadas al entrenar: son las que determinan los resultados (reproducibilidad).
+torch==2.9.0
+transformers==5.13.0
+datasets==5.0.0
+accelerate==1.14.0
+sentencepiece==0.2.1   # DeBERTa-v3 usa un tokenizer SentencePiece
 
 # === App de demo (Fase 4) ===
 gradio
 
 # === Utilidades ===
 tqdm
+
+# === Dev / tests ===
+pytest
 
 # === Stretch: LoRA/QLoRA sobre un decoder (descomentar cuando se llegue) ===
 # peft
