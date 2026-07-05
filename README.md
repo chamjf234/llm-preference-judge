@@ -24,17 +24,23 @@ multiclase, así que no basta con acertar la clase: importa dar **probabilidades
 4. *(Stretch)* **LoRA/QLoRA** sobre un decoder pequeño (Llama-3.2 / Qwen2.5).
 
 ## Resultados
-| Método | Log loss (validación) |
+| Método (LogReg, C=0.1) | Log loss (validación) |
 |---|---|
 | Aleatorio (ln 3) | 1.099 |
-| TF-IDF + LogReg — texto combinado (ciego a A/B) | 1.119 |
-| TF-IDF + LogReg — diferencia tfidf(A)−tfidf(B) | **1.092** |
+| TF-IDF texto combinado (ciego a A/B) | 1.083 |
+| Solo 6 features numéricas (longitud, A==B, vacías) | 1.072 |
+| TF-IDF diferencia tfidf(A)−tfidf(B) | 1.054 |
+| TF-IDF diferencia + numéricas | **1.045** |
 | DeBERTa-v3 (fine-tuned) | _pendiente_ |
 
-> El baseline clásico apenas supera el azar (+0.007), y solo cuando las features respetan la
-> estructura A/B del problema. Bag-of-words no "entiende" calidad ni coherencia — que es lo que
-> decide la preferencia humana. De ahí el salto a un transformer en la Fase 2.
-> Validación con split **agrupado por prompt** (evita fuga entre train y val).
+> Dos lecciones del baseline. **(1) La estructura importa:** las features que respetan la
+> simetría A/B (diferencia) ganan a las ciegas (combinado). **(2) Los sesgos humanos son señal
+> barata:** 6 números sin leer contenido — longitudes (los humanos prefieren la respuesta más
+> larga: P(gana A | A más larga) ≈ 0.62), respuestas idénticas (A==B → 90% empate) y vacías —
+> casi empatan con 50k features de TF-IDF. Lo que el baseline *no* puede medir es calidad y
+> coherencia: ese es el trabajo de DeBERTa en la Fase 2, y ahora tiene un piso honesto que batir.
+> Validación con split **agrupado por prompt** (evita fuga entre train y val). Texto **parseado**
+> de las listas JSON multi-turno antes de todo (ver EDA sección 0).
 
 ## Demo
 _Pendiente: enlace a la app en HuggingFace Spaces + captura._
