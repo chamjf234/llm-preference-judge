@@ -42,6 +42,11 @@ def head_tail(ids: list[int], budget: int, tail_frac: float = 0.25) -> list[int]
     que pesa en la preferencia humana. 75/25 y no 50/50 porque el planteamiento
     inicial también importa; es la palanca a experimentar si hay tiempo de GPU.
     """
+    if budget < 1:
+        # Presupuesto inválido = bug del llamador. Fallar ruidosamente: con budget
+        # negativo el slicing de Python devuelve casi toda la secuencia en silencio
+        # (nos pasó: OOM de 5.3GB en el smoke test por secuencias sin truncar).
+        raise ValueError(f"budget debe ser >= 1, llegó {budget}")
     if len(ids) <= budget:
         return ids
     n_tail = int(budget * tail_frac)
@@ -64,6 +69,11 @@ def encode_pair(tok, prompt: str, resp_a: str, resp_b: str,
     NO se hace padding aquí: el DataCollatorWithPadding rellena por batch al vuelo
     (dinámico = menos cómputo desperdiciado que rellenar todo a 512).
     """
+    # El cap del prompt escala con max_len (128 = 512//4): si se entrena con una
+    # longitud menor (p. ej. smoke con 64), el prompt no puede comerse el presupuesto
+    # entero y dejar 'rest' negativo — el bug que causó el OOM del smoke test.
+    prompt_budget = min(prompt_budget, max_len // 4)
+
     ids = lambda s: tok.encode(s, add_special_tokens=False)
     p = head_tail(ids(prompt), prompt_budget)
 

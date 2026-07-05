@@ -82,6 +82,15 @@ def test_encode_pair_largo_respeta_max_len(tok):
     assert len(enc["input_ids"]) == train.MAX_LEN
 
 
+def test_encode_pair_max_len_pequeno_no_desborda(tok):
+    """Regresión: con max_len=64 (modo smoke) y prompt largo, prompt_budget=128 dejaba
+    presupuestos NEGATIVOS y el slicing negativo devolvía la respuesta casi entera
+    (secuencias de ~3700 tokens → OOM en el smoke test)."""
+    largo = "palabra " * 3000
+    enc = train.encode_pair(tok, largo, largo, largo, max_len=64)
+    assert len(enc["input_ids"]) <= 64
+
+
 def test_encode_pair_cede_presupuesto_a_la_respuesta_larga(tok):
     corta, larga = "ok", "palabra " * 3000
     enc = train.encode_pair(tok, "hola", corta, larga)
