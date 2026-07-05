@@ -32,3 +32,17 @@ def swap_ab(df: pd.DataFrame, label_col: str = "_y") -> pd.DataFrame:
 def augment_with_swap(df: pd.DataFrame, label_col: str = "_y") -> pd.DataFrame:
     """Train duplicado: original + intercambiado. SOLO para el fold de train."""
     return pd.concat([df, swap_ab(df, label_col)], ignore_index=True)
+
+
+def head_tail(ids: list[int], budget: int, tail_frac: float = 0.25) -> list[int]:
+    """Trunca a `budget` tokens conservando inicio y FINAL de la secuencia.
+
+    Por qué no solo head: el final de una respuesta suele traer la conclusión,
+    que pesa en la preferencia humana. 75/25 y no 50/50 porque el planteamiento
+    inicial también importa; es la palanca a experimentar si hay tiempo de GPU.
+    """
+    if len(ids) <= budget:
+        return ids
+    n_tail = int(budget * tail_frac)
+    n_head = budget - n_tail
+    return ids[:n_head] + (ids[len(ids) - n_tail:] if n_tail else [])

@@ -41,3 +41,19 @@ def test_augment_with_swap_duplica():
     out = train.augment_with_swap(_df())
     assert len(out) == 6
     assert list(out["_y"]) == [0, 1, 2, 1, 0, 2]
+
+
+def test_head_tail_corto_queda_igual():
+    assert train.head_tail(list(range(10)), budget=20) == list(range(10))
+
+
+def test_head_tail_recorta_a_presupuesto_exacto():
+    ids = list(range(100))
+    out = train.head_tail(ids, budget=20, tail_frac=0.25)
+    assert len(out) == 20
+    assert out[:15] == list(range(15))          # 75% inicio
+    assert out[15:] == list(range(95, 100))     # 25% final
+
+
+def test_head_tail_tail_frac_cero_es_solo_head():
+    assert train.head_tail(list(range(100)), budget=10, tail_frac=0.0) == list(range(10))
