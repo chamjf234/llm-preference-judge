@@ -57,3 +57,34 @@ def test_head_tail_recorta_a_presupuesto_exacto():
 
 def test_head_tail_tail_frac_cero_es_solo_head():
     assert train.head_tail(list(range(100)), budget=10, tail_frac=0.0) == list(range(10))
+
+
+import pytest
+
+
+@pytest.fixture(scope="module")
+def tok():
+    from transformers import AutoTokenizer
+    return AutoTokenizer.from_pretrained("microsoft/deberta-v3-small")
+
+
+def test_encode_pair_corto_sin_truncar(tok):
+    enc = train.encode_pair(tok, "hola", "respuesta a", "respuesta b")
+    assert len(enc["input_ids"]) <= train.MAX_LEN
+    assert enc["input_ids"][0] == tok.cls_token_id
+    assert enc["input_ids"].count(tok.sep_token_id) == 3
+    assert len(enc["attention_mask"]) == len(enc["input_ids"])
+
+
+def test_encode_pair_largo_respeta_max_len(tok):
+    largo = "palabra " * 3000
+    enc = train.encode_pair(tok, largo, largo, largo)
+    assert len(enc["input_ids"]) == train.MAX_LEN
+
+
+def test_encode_pair_cede_presupuesto_a_la_respuesta_larga(tok):
+    corta, larga = "ok", "palabra " * 3000
+    enc = train.encode_pair(tok, "hola", corta, larga)
+    # si B es larga y A corta, B debe poder usar el sobrante de A:
+    # el total llega (casi) al máximo en vez de quedarse a mitad
+    assert len(enc["input_ids"]) > train.MAX_LEN - 10
