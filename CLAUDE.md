@@ -35,9 +35,23 @@ La **estrategia de truncado** es la decisión técnica clave a documentar (trunc
 head+tail, etc.). Vigilar también los **empates** (clase difícil, que el modelo no la ignore).
 
 ## Estado actual
-- **Fase 0 (setup):** repo y estructura creados. Falta primer commit + repo en GitHub (pendiente
-  para hacer junto con el usuario, que está aprendiendo git).
-- Siguiente: Fase 1 (EDA + baseline TF-IDF + Logistic Regression) sobre datos reales de Kaggle.
+- **Fases 0-1 completas.** Hallazgo clave del EDA: las columnas de texto son LISTAS JSON de
+  turnos (13% multi-turno, turnos null) — SIEMPRE parsear con `data.add_parsed_text` antes de
+  medir o modelar. Baseline: TF-IDF diferencia + 6 features numéricas de sesgos humanos,
+  log loss **1.0445 ± 0.0025** (GroupKFold 5-fold agrupado por prompt).
+- **Validación:** fold canónico = `data.CANONICAL_FOLD` (fold 0). Baseline ahí: **1.0451**.
+  Toda comparación con transformers se hace sobre ese mismo fold.
+- **Fase 2 (en curso):** pipeline DeBERTa completo con TDD (`src/train.py`, 11 tests) —
+  truncado head+tail con presupuesto por campo, aumento A↔B, label smoothing, TTA.
+  Run 1 en Kaggle (deberta-v3-small, 2 épocas, lr 2e-5): **1.0714** con TTA — no bate al
+  baseline; la época 2 sobreajusta (1.073 → 1.134). Plan de la fase:
+  `docs/superpowers/plans/2026-07-05-fase2-deberta.md`.
+- Gotchas aprendidos: checkpoint de deberta-v3-small está en fp16 → cargar con
+  `dtype=torch.float32` explícito (transformers v5 conserva el dtype del checkpoint);
+  el Training Loss reportado por el Trainer con 2 GPUs + grad accum viene inflado ~8x
+  (suma en vez de promediar) — la métrica fiable es `log_loss` de compute_metrics.
+- Siguiente: iterar Fase 2 (lr menor / deberta-v3-base / ensemble con baseline) y
+  luego Fase 3 (calibración temperature scaling + submission).
 
 ## Convenciones
 - Explicaciones en **español**, con el *porqué* de cada decisión no obvia (el usuario está
