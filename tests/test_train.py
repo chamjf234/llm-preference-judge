@@ -109,6 +109,37 @@ class _FakeTrainer:
         return type("P", (), {"predictions": logits})()
 
 
+def test_grid_blend_prefiere_al_modelo_perfecto():
+    import ensemble
+    y = np.array([0, 1, 2, 0, 1, 2])
+    perfecto = np.eye(3)[y] * 0.94 + 0.02          # casi one-hot correcto
+    uniforme = np.full((6, 3), 1 / 3)
+    best_w, best_ll, tabla = ensemble.grid_blend(perfecto, uniforme, y)
+    assert best_w == 1.0                            # todo el peso al modelo bueno
+    assert best_ll < 0.2
+    assert len(tabla) == 11                         # grid de 0.0 a 1.0 en pasos de 0.1
+
+
+def test_grid_blend_mezcla_gana_a_los_extremos():
+    """La mezcla gana cuando la reducción de varianza (errores decorrelacionados
+    GRANDES) supera la brecha de calidad entre los modelos. Con ruido chico el
+    mejor modelo se lleva todo el peso — y eso también es comportamiento correcto."""
+    import ensemble
+    rng = np.random.default_rng(0)
+    y = rng.integers(0, 3, 300)
+    # dos "modelos" con MUCHO ruido independiente y el mismo sesgo leve a la verdad
+    def modelo_ruidoso(seed):
+        r = np.random.default_rng(seed)
+        p = np.full((300, 3), 1 / 3) + r.normal(0, 0.25, (300, 3))
+        p[np.arange(300), y] += 0.10
+        p = np.clip(p, 1e-3, None)
+        return p / p.sum(axis=1, keepdims=True)
+    best_w, best_ll, tabla = ensemble.grid_blend(modelo_ruidoso(1), modelo_ruidoso(2), y)
+    ll_solo_a, ll_solo_b = tabla[-1][1], tabla[0][1]
+    assert best_ll < min(ll_solo_a, ll_solo_b)      # la mezcla gana a ambos extremos
+    assert 0.0 < best_w < 1.0                       # y el óptimo es una mezcla real
+
+
 def test_tta_anula_el_sesgo_posicional(tok):
     df = pd.DataFrame({
         "prompt": ["p"], "response_a": ["aaa"], "response_b": ["bbb"], "_y": [0],

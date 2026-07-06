@@ -134,10 +134,17 @@ def predict_proba_tta(trainer, tok, df: pd.DataFrame, max_len: int = MAX_LEN) ->
     return (p_ab + p_ba) / 2
 
 
-def main(train_csv: str, out_dir: str = "deberta_out", smoke: bool = False) -> None:
+def main(train_csv: str, out_dir: str = "deberta_out", smoke: bool = False) -> dict:
+    from pathlib import Path
+
     import data
+    import transformers
     from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
                               DataCollatorWithPadding, Trainer, TrainingArguments)
+
+    # El run 1 mostró un warning de deprecación que no cuadraba con la versión fijada:
+    # imprimirla siempre para detectar si el entorno ignoró el pin de requirements.
+    print(f"transformers == {transformers.__version__}")
 
     df = data.load_train(train_csv)
     df = data.add_parsed_text(df)
@@ -164,13 +171,20 @@ def main(train_csv: str, out_dir: str = "deberta_out", smoke: bool = False) -> N
         MODEL_NAME, num_labels=3, dtype=torch.float32)
     args = TrainingArguments(
         output_dir=out_dir,
-        learning_rate=2e-5, warmup_ratio=0.06, weight_decay=0.01,
+        # lr 1e-5 (run 2): con 2e-5 el run 1 sobreajustó tras la época 1 (val 1.073 ->
+        # 1.134) — optimización agresiva destruye lo pre-entrenado y pasa a memorizar.
+        learning_rate=1e-5, warmup_ratio=0.06, weight_decay=0.01,
         num_train_epochs=2,
-        per_device_train_batch_size=8, gradient_accumulation_steps=4,  # efectivo 32
+        per_device_train_batch_size=8, gradient_accumulation_steps=4,  # efectivo 32/GPU
         per_device_eval_batch_size=32,
         label_smoothing_factor=0.1,
         fp16=torch.cuda.is_available(),
-        eval_strategy="epoch", save_strategy="epoch",
+        # eval/save cada 25% del total (un float < 1 = fracción de los steps totales):
+        # 4 mediciones en 2 épocas. Con eval por época (run 1) el mejor punto pudo quedar
+        # a MITAD de la época 1 y no lo vimos; más granularidad = mejor rescate del
+        # checkpoint óptimo. save_total_limit acota el disco de /kaggle/working.
+        eval_strategy="steps", eval_steps=0.25,
+        save_strategy="steps", save_steps=0.25, save_total_limit=2,
         load_best_model_at_end=True, metric_for_best_model="log_loss",
         greater_is_better=False,
         logging_steps=100, report_to="none", seed=42,
@@ -186,6 +200,12 @@ def main(train_csv: str, out_dir: str = "deberta_out", smoke: bool = False) -> N
     from sklearn.metrics import log_loss
     ll = log_loss(val_df["_y"], proba, labels=[0, 1, 2])
     print(f"\nlog loss en fold canónico CON TTA = {ll:.4f}  (baseline a batir: 1.0451)")
+
+    # Persistir las probabilidades de validación: son el insumo del ensemble con el
+    # baseline y de la calibración (Fase 3). En el run 1 no se guardaron y recomputarlas
+    # exige inferencia completa — lección aprendida: los artefactos de eval se guardan.
+    np.save(Path(out_dir) / "val_proba_tta.npy", proba)
+    return {"val_proba_tta": proba, "log_loss_tta": float(ll)}
 
 
 if __name__ == "__main__":
