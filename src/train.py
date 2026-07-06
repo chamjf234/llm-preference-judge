@@ -151,12 +151,17 @@ def main(train_csv: str, out_dir: str = "deberta_out", smoke: bool = False) -> N
     if smoke:  # smoke: verificar el wiring completo en CPU en ~2 min, no aprender nada
         train_df, val_df, max_len = train_df.head(64), val_df.head(64), 64
 
+    import torch
+
     tok = AutoTokenizer.from_pretrained(MODEL_NAME)
     ds_tr = build_dataset(train_df, tok, max_len)
     ds_va = build_dataset(val_df, tok, max_len)
-    model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=3)
-
-    import torch
+    # dtype explícito: el checkpoint de deberta-v3-small está guardado en fp16 y
+    # transformers v5 conserva el dtype del checkpoint por default ("auto"). La
+    # precisión mixta (fp16=True) exige pesos maestros en fp32; con el modelo ya
+    # en fp16 el GradScaler truena: "Attempting to unscale FP16 gradients".
+    model = AutoModelForSequenceClassification.from_pretrained(
+        MODEL_NAME, num_labels=3, dtype=torch.float32)
     args = TrainingArguments(
         output_dir=out_dir,
         learning_rate=2e-5, warmup_ratio=0.06, weight_decay=0.01,
