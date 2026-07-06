@@ -32,6 +32,9 @@ multiclase, así que no basta con acertar la clase: importa dar **probabilidades
 | TF-IDF diferencia tfidf(A)−tfidf(B) | 1.054 ± 0.002 |
 | TF-IDF diferencia + numéricas | **1.045 ± 0.003** |
 | DeBERTa-v3-small — run 1: 2 épocas, lr 2e-5, TTA (fold canónico) | 1.0714 |
+| DeBERTa-v3-small — run 2: lr 1e-5, eval cada 25% (fold canónico) | 1.0761 |
+| Ensemble baseline + DeBERTa-small — blend 50/50 (fold canónico) | 1.0482 |
+| Ensemble baseline + DeBERTa-small — mejor w=0.2 (fold canónico) | 1.0435* |
 
 > Dos lecciones del baseline. **(1) La estructura importa:** las features que respetan la
 > simetría A/B (diferencia) ganan a las ciegas (combinado). **(2) Los sesgos humanos son señal
@@ -45,11 +48,18 @@ multiclase, así que no basta con acertar la clase: importa dar **probabilidades
 > mejor baseline marca **1.0451** — ese es el número exacto a batir. Texto **parseado** de las
 > listas JSON multi-turno antes de todo (ver EDA sección 0).
 >
-> **Run 1 de DeBERTa (no bate al baseline aún):** log loss 1.0730 en la época 1 y 1.1341 en
-> la 2 (**sobreajuste**; se rescata el mejor checkpoint). Con TTA: **1.0714** ≈ el nivel de las
-> features numéricas solas — en una época el modelo aprendió el sesgo de verbosidad pero aún no
-> la señal fina de calidad. Siguiente iteración: lr menor y/o más capacidad (`base`), y ensemble
-> con el baseline.
+> **Lectura de la Fase 2 con `deberta-v3-small` (2 runs):** el modelo se estanca en ~**1.07**.
+> Run 1 (lr 2e-5): mejor punto 1.0730 al final de la época 1, luego sobreajusta (1.134).
+> Run 2 (lr 1e-5, eval cada 25% de steps): misma forma, sobreajuste más suave, pero mejor punto
+> **peor** (1.0761) — el lr no era el cuello de botella. Las probabilidades TTA lo delatan:
+> p(gana A) ≈ p(gana B) en casi todas las filas — el modelo aprende los **empates** y la forma,
+> pero apenas la **dirección** de la preferencia (la parte difícil). El **ensemble** con el
+> baseline confirma que aporta poco decorrelacionado: blend 50/50 = 1.0482 (pierde);
+> mejor w=0.2 = 1.0435\*.
+>
+> \* *w elegido mirando validación (optimista) y la mejora (−0.002) está dentro del umbral de
+> ruido entre folds (±0.0025): **empate técnico**, no victoria. Conclusión honesta: para batir
+> al baseline con claridad hace falta más capacidad (`deberta-v3-base`), no más tuning del small.*
 
 ## Demo
 _Pendiente: enlace a la app en HuggingFace Spaces + captura._
