@@ -5,9 +5,13 @@ data/
 # --- Artefactos de modelo: van a HuggingFace Hub, no al repo ---
 models/
 checkpoints/
+deberta_out/
 *.bin
 *.safetensors
 *.pt
+
+# --- Logs de entrenamiento/smoke ---
+*.log
 
 # --- Python ---
 __pycache__/
