@@ -134,7 +134,11 @@ def predict_proba_tta(trainer, tok, df: pd.DataFrame, max_len: int = MAX_LEN) ->
     return (p_ab + p_ba) / 2
 
 
-def main(train_csv: str, out_dir: str = "deberta_out", smoke: bool = False) -> dict:
+def main(train_csv: str, out_dir: str = "deberta_out", smoke: bool = False,
+         model_name: str = MODEL_NAME, epochs: int = 2) -> dict:
+    """Entrena y evalúa en el fold canónico. model_name/epochs son parámetros para
+    poder experimentar (small vs base, 1 vs 2 épocas) sin editar constantes: cada
+    run queda descrito por su llamada en el notebook, que es el registro del experimento."""
     from pathlib import Path
 
     import data
@@ -160,21 +164,22 @@ def main(train_csv: str, out_dir: str = "deberta_out", smoke: bool = False) -> d
 
     import torch
 
-    tok = AutoTokenizer.from_pretrained(MODEL_NAME)
+    print(f"modelo: {model_name}  |  épocas: {epochs}")
+    tok = AutoTokenizer.from_pretrained(model_name)
     ds_tr = build_dataset(train_df, tok, max_len)
     ds_va = build_dataset(val_df, tok, max_len)
-    # dtype explícito: el checkpoint de deberta-v3-small está guardado en fp16 y
+    # dtype explícito: los checkpoints de deberta-v3 están guardados en fp16 y
     # transformers v5 conserva el dtype del checkpoint por default ("auto"). La
     # precisión mixta (fp16=True) exige pesos maestros en fp32; con el modelo ya
     # en fp16 el GradScaler truena: "Attempting to unscale FP16 gradients".
     model = AutoModelForSequenceClassification.from_pretrained(
-        MODEL_NAME, num_labels=3, dtype=torch.float32)
+        model_name, num_labels=3, dtype=torch.float32)
     args = TrainingArguments(
         output_dir=out_dir,
         # lr 1e-5 (run 2): con 2e-5 el run 1 sobreajustó tras la época 1 (val 1.073 ->
         # 1.134) — optimización agresiva destruye lo pre-entrenado y pasa a memorizar.
         learning_rate=1e-5, warmup_ratio=0.06, weight_decay=0.01,
-        num_train_epochs=2,
+        num_train_epochs=epochs,
         per_device_train_batch_size=8, gradient_accumulation_steps=4,  # efectivo 32/GPU
         per_device_eval_batch_size=32,
         label_smoothing_factor=0.1,
@@ -214,5 +219,7 @@ if __name__ == "__main__":
     ap.add_argument("--train-csv", default="data/train.csv")
     ap.add_argument("--out-dir", default="deberta_out")
     ap.add_argument("--smoke", action="store_true")
+    ap.add_argument("--model-name", default=MODEL_NAME)
+    ap.add_argument("--epochs", type=int, default=2)
     a = ap.parse_args()
-    main(a.train_csv, a.out_dir, a.smoke)
+    main(a.train_csv, a.out_dir, a.smoke, a.model_name, a.epochs)
