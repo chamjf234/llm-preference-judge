@@ -41,11 +41,18 @@ head+tail, etc.). Vigilar también los **empates** (clase difícil, que el model
   log loss **1.0445 ± 0.0025** (GroupKFold 5-fold agrupado por prompt).
 - **Validación:** fold canónico = `data.CANONICAL_FOLD` (fold 0). Baseline ahí: **1.0451**.
   Toda comparación con transformers se hace sobre ese mismo fold.
-- **Fase 2 (en curso):** pipeline DeBERTa completo con TDD (`src/train.py`, 11 tests) —
-  truncado head+tail con presupuesto por campo, aumento A↔B, label smoothing, TTA.
-  Run 1 en Kaggle (deberta-v3-small, 2 épocas, lr 2e-5): **1.0714** con TTA — no bate al
-  baseline; la época 2 sobreajusta (1.073 → 1.134). Plan de la fase:
-  `docs/superpowers/plans/2026-07-05-fase2-deberta.md`.
+- **Fase 2 (en curso):** pipeline DeBERTa completo con TDD (`src/train.py` + `src/ensemble.py`,
+  13 tests) — truncado head+tail con presupuesto por campo, aumento A↔B, label smoothing, TTA,
+  ensemble con el baseline. Plan: `docs/superpowers/plans/2026-07-05-fase2-deberta.md`.
+- **Conclusión de deberta-v3-small (2 runs en Kaggle): se estanca en ~1.07.** Run 1 (lr 2e-5):
+  1.0714 TTA. Run 2 (lr 1e-5, eval cada 25%): 1.0761 — el lr no era el cuello de botella.
+  Las probas TTA salen con p(A) ≈ p(B): aprende empates/forma, no dirección de preferencia.
+  Ensemble: blend 50/50 = 1.0482 (pierde vs baseline); mejor w=0.2 = 1.0435 (mejora −0.002,
+  DENTRO del ruido ±0.0025 → empate técnico). Los pesos de cada run se pisan en el mismo repo
+  de HF Hub (`chamjf234/llm-preference-judge-deberta-v3-small`).
+- OJO Kaggle: el notebook importado es una COPIA — si cambian las celdas, hay que re-importar
+  el .ipynb (el código de src/ sí llega solo vía git clone). El baseline da 1.0459 en Kaggle
+  vs 1.0451 local (versiones de sklearn distintas; comparar siempre dentro del mismo entorno).
 - Gotchas aprendidos: checkpoint de deberta-v3-small está en fp16 → cargar con
   `dtype=torch.float32` explícito (transformers v5 conserva el dtype del checkpoint);
   el Training Loss reportado por el Trainer con 2 GPUs + grad accum viene inflado ~8x
