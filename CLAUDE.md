@@ -44,12 +44,15 @@ head+tail, etc.). Vigilar también los **empates** (clase difícil, que el model
 - **Fase 2 (en curso):** pipeline DeBERTa completo con TDD (`src/train.py` + `src/ensemble.py`,
   13 tests) — truncado head+tail con presupuesto por campo, aumento A↔B, label smoothing, TTA,
   ensemble con el baseline. Plan: `docs/superpowers/plans/2026-07-05-fase2-deberta.md`.
-- **Conclusión de deberta-v3-small (2 runs en Kaggle): se estanca en ~1.07.** Run 1 (lr 2e-5):
-  1.0714 TTA. Run 2 (lr 1e-5, eval cada 25%): 1.0761 — el lr no era el cuello de botella.
-  Las probas TTA salen con p(A) ≈ p(B): aprende empates/forma, no dirección de preferencia.
-  Ensemble: blend 50/50 = 1.0482 (pierde vs baseline); mejor w=0.2 = 1.0435 (mejora −0.002,
-  DENTRO del ruido ±0.0025 → empate técnico). Los pesos de cada run se pisan en el mismo repo
-  de HF Hub (`chamjf234/llm-preference-judge-deberta-v3-small`).
+- **Conclusión de la Fase 2 (3 runs en Kaggle): los encoders tocan techo en ~1.07.**
+  small run 1 (lr 2e-5): 1.0714 · small run 2 (lr 1e-5): 1.0761 · **base run 3 (1 época):
+  1.0712 — mismo techo con 3× backbone: hipótesis de capacidad refutada.** Las probas TTA
+  salen con p(A) ≈ p(B) en ambos tamaños: los encoders aprenden empates/forma, no dirección
+  de preferencia (consistente con la competición real: esa señal requirió decoders LLM).
+  Ensemble (siempre óptimo en w=0.2): small 1.0435, base 1.0427 (−0.003 vs baseline, al borde
+  del ruido ±0.0025). Matiz: la curva de base aún descendía al cerrar su única época.
+  Pesos en HF Hub: `...-deberta-v3-small` (runs 1-2 se pisan) y `...-deberta-v3-base` (run 3).
+  Pendiente menor: normalizar probas en ensemble.grid_blend (warning float32 de sklearn).
 - OJO Kaggle: el notebook importado es una COPIA — si cambian las celdas, hay que re-importar
   el .ipynb (el código de src/ sí llega solo vía git clone). El baseline da 1.0459 en Kaggle
   vs 1.0451 local (versiones de sklearn distintas; comparar siempre dentro del mismo entorno).
