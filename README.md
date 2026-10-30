@@ -35,6 +35,8 @@ multiclase, así que no basta con acertar la clase: importa dar **probabilidades
 | DeBERTa-v3-small — run 2: lr 1e-5, eval cada 25% (fold canónico) | 1.0761 |
 | Ensemble baseline + DeBERTa-small — blend 50/50 (fold canónico) | 1.0482 |
 | Ensemble baseline + DeBERTa-small — mejor w=0.2 (fold canónico) | 1.0435* |
+| DeBERTa-v3-base — run 3: 1 época, lr 1e-5, TTA (fold canónico) | 1.0712 |
+| Ensemble baseline + DeBERTa-base — mejor w=0.2 (fold canónico) | 1.0427* |
 
 > Dos lecciones del baseline. **(1) La estructura importa:** las features que respetan la
 > simetría A/B (diferencia) ganan a las ciegas (combinado). **(2) Los sesgos humanos son señal
@@ -57,9 +59,18 @@ multiclase, así que no basta con acertar la clase: importa dar **probabilidades
 > baseline confirma que aporta poco decorrelacionado: blend 50/50 = 1.0482 (pierde);
 > mejor w=0.2 = 1.0435\*.
 >
-> \* *w elegido mirando validación (optimista) y la mejora (−0.002) está dentro del umbral de
-> ruido entre folds (±0.0025): **empate técnico**, no victoria. Conclusión honesta: para batir
-> al baseline con claridad hace falta más capacidad (`deberta-v3-base`), no más tuning del small.*
+> **Run 3 — la prueba de capacidad (`deberta-v3-base`, 3× backbone, 1 época):** 1.0712 —
+> **el mismo techo que small** (1.0714). Hipótesis de capacidad refutada: el ~1.07 es el techo
+> del *enfoque* encoder@512, no del tamaño. El ensemble apenas mejora (mejor w=0.2 → 1.0427,
+> −0.003 vs baseline, en el borde del ruido) y el óptimo sigue en w=0.2: base aporta la misma
+> poca información decorrelacionada que small. Matiz: la curva de base aún descendía al cerrar
+> la época (1.0736 → 1.0715), pero la pendiente no justifica más GPU en esta dirección.
+>
+> \* *w elegido mirando validación (optimista); mejoras de ~0.002-0.003 con umbral de ruido
+> ±0.0025 = empate técnico o victoria marginal. **Conclusión de la Fase 2:** los encoders
+> capturan empates y forma (p(A) ≈ p(B) en las probabilidades de ambos tamaños), pero no la
+> dirección de la preferencia — consistente con la competición real, donde esa señal solo
+> apareció con decoders LLM (el* stretch *de este proyecto).*
 
 ## Demo
 _Pendiente: enlace a la app en HuggingFace Spaces + captura._
