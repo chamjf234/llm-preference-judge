@@ -8,7 +8,14 @@ Basado en la competición de Kaggle
 [**LLM Classification Finetuning**](https://www.kaggle.com/competitions/llm-classification-finetuning)
 (datos de Chatbot Arena / LMSYS).
 
-> 🚧 **En construcción.** Este README se irá completando conforme avanza el proyecto.
+**Estado.** Baseline y fine-tuning de DeBERTa-v3 (`small` y `base`) terminados y documentados. No se
+hicieron la calibración de probabilidades, la app de demo ni LoRA.
+
+**English summary.** A model that predicts which of two LLM responses a person prefers (Chatbot
+Arena data). Under 5-fold cross-validation grouped by prompt, a symmetric TF-IDF baseline with 6
+numeric features (log loss 1.045 ± 0.003; random: 1.099) beat DeBERTa-v3 fine-tunes, small and base
+alike (~1.07). Tripling the backbone hit the same ceiling, and ensembles stayed at the noise
+threshold (about 1.043). The results below explain why.
 
 ---
 
@@ -18,10 +25,11 @@ preferencia humana entre tres clases: **gana A / gana B / empate**. Se evalúa c
 multiclase, así que no basta con acertar la clase: importa dar **probabilidades bien calibradas**.
 
 ## Enfoque
-1. **Baseline** — TF-IDF + Regresión Logística (piso de referencia).
-2. **Fine-tuning de DeBERTa-v3** — encoder afinado como clasificador de 3 clases.
-3. **Calibración** de probabilidades (clave por la métrica log loss).
-4. *(Stretch)* **LoRA/QLoRA** sobre un decoder pequeño (Llama-3.2 / Qwen2.5).
+1. **Baseline** — TF-IDF + Regresión Logística (piso de referencia). *Hecho.*
+2. **Fine-tuning de DeBERTa-v3** — encoder afinado como clasificador de 3 clases. *Hecho con
+   `small` y `base`.*
+3. **Calibración** de probabilidades (clave por la métrica log loss). *No realizada.*
+4. *(Stretch)* **LoRA/QLoRA** sobre un decoder pequeño (Llama-3.2 / Qwen2.5). *No realizado.*
 
 ## Resultados
 | Método (LogReg, C=0.1) | Log loss (5-fold agrupado por prompt, media ± std) |
@@ -72,19 +80,34 @@ multiclase, así que no basta con acertar la clase: importa dar **probabilidades
 > dirección de la preferencia — consistente con la competición real, donde esa señal solo
 > apareció con decoders LLM (el* stretch *de este proyecto).*
 
-## Demo
-_Pendiente: enlace a la app en HuggingFace Spaces + captura._
-
 ## Estructura del repo
 ```
 notebooks/   Exploración y entrenamiento (versiones Kaggle)
-src/         Código reutilizable: datos, baseline, entrenamiento, inferencia
-app/         App de demo (Gradio)
+src/         Código reutilizable: datos, baseline, entrenamiento, ensemble
+tests/       Tests del pipeline de entrenamiento
 data/        Datos de Kaggle (no versionados)
 ```
 
 ## Cómo reproducir
-_Pendiente: pasos para descargar datos, entrenar y correr la app._
+```bash
+pip install -r requirements.txt
+
+# Aceptar las reglas de la competición en Kaggle y descargar los datos a data/
+kaggle competitions download -c llm-classification-finetuning -p data
+unzip data/llm-classification-finetuning.zip -d data
+
+python -m src.baseline        # tabla de baselines (5-fold agrupado por prompt)
+python -m src.train --smoke   # prueba corta del pipeline de DeBERTa
+pytest                        # 13 tests
+```
+El entrenamiento completo corre en `notebooks/02_finetune_deberta.ipynb` con GPU de Kaggle.
 
 ## Aprendizajes
-_Pendiente: notas sobre truncado de texto largo, calibración, y (stretch) LoRA._
+- **Primero el baseline.** Sin él, ~1.07 habría parecido un buen resultado frente al azar (1.099).
+  Con él se ve que ninguno de los dos transformers le ganó.
+- **Poner a prueba la hipótesis.** Triplicar el backbone dio el mismo techo (1.0712 frente a 1.0714):
+  el límite era del enfoque, no del tamaño.
+- **Ruido antes que decimales.** Agrupar por prompt evita fugas, y la desviación entre folds dice
+  cuándo una mejora es real. Por eso los ensembles (1.0435 y 1.0427) no se reportan como victoria.
+- **El texto largo es parte del problema.** Cerca del 48 % de las filas excede ~512 tokens y casi
+  todo el largo está en las respuestas, así que el truncado conserva el prompt y recorta por campo.

@@ -11,9 +11,6 @@ datasets==5.0.0
 accelerate==1.14.0
 sentencepiece==0.2.1   # DeBERTa-v3 usa un tokenizer SentencePiece
 
-# === App de demo (Fase 4) ===
-gradio
-
 # === Utilidades ===
 tqdm
 

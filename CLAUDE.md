@@ -64,7 +64,5 @@ head+tail, etc.). Vigilar también los **empates** (clase difícil, que el model
   luego Fase 3 (calibración temperature scaling + submission).
 
 ## Convenciones
-- Explicaciones en **español**, con el *porqué* de cada decisión no obvia (el usuario está
-  aprendiendo AI engineering / software; primer proyecto con transformers).
-- Git: modo "mezcla" — Claude ejecuta operaciones rutinarias pero explica qué pasa y por qué.
-  No `git add .` / `-A`; agregar archivos por nombre. Nunca force push a main.
+- Explicaciones en **español**, con el *porqué* de cada decisión no obvia.
+- Git: no `git add .` / `-A`; agregar archivos por nombre. Nunca force push a main.
