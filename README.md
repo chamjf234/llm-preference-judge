@@ -8,14 +8,14 @@ Basado en la competición de Kaggle
 [**LLM Classification Finetuning**](https://www.kaggle.com/competitions/llm-classification-finetuning)
 (datos de Chatbot Arena / LMSYS).
 
-**Estado.** Baseline y fine-tuning de `deberta-v3-small` terminados y documentados. No se hicieron
-la calibración de probabilidades, la app de demo ni LoRA. El notebook actual prepara un tercer run
-con `deberta-v3-base`, sin resultado publicado todavía.
+**Estado.** Baseline y fine-tuning de DeBERTa-v3 (`small` y `base`) terminados y documentados. No se
+hicieron la calibración de probabilidades, la app de demo ni LoRA.
 
 **English summary.** A model that predicts which of two LLM responses a person prefers (Chatbot
 Arena data). Under 5-fold cross-validation grouped by prompt, a symmetric TF-IDF baseline with 6
-numeric features (log loss 1.045 ± 0.003; random: 1.099) beat a DeBERTa-v3-small fine-tune (~1.07),
-and the ensemble ended in a statistical tie (1.0435). The results below explain why.
+numeric features (log loss 1.045 ± 0.003; random: 1.099) beat DeBERTa-v3 fine-tunes, small and base
+alike (~1.07). Tripling the backbone hit the same ceiling, and ensembles stayed at the noise
+threshold (about 1.043). The results below explain why.
 
 ---
 
@@ -27,7 +27,7 @@ multiclase, así que no basta con acertar la clase: importa dar **probabilidades
 ## Enfoque
 1. **Baseline** — TF-IDF + Regresión Logística (piso de referencia). *Hecho.*
 2. **Fine-tuning de DeBERTa-v3** — encoder afinado como clasificador de 3 clases. *Hecho con
-   `small`; `base` sin resultado todavía.*
+   `small` y `base`.*
 3. **Calibración** de probabilidades (clave por la métrica log loss). *No realizada.*
 4. *(Stretch)* **LoRA/QLoRA** sobre un decoder pequeño (Llama-3.2 / Qwen2.5). *No realizado.*
 
@@ -104,8 +104,10 @@ El entrenamiento completo corre en `notebooks/02_finetune_deberta.ipynb` con GPU
 
 ## Aprendizajes
 - **Primero el baseline.** Sin él, ~1.07 habría parecido un buen resultado frente al azar (1.099).
-  Con él se ve que el transformer pequeño no aportó.
+  Con él se ve que ninguno de los dos transformers le ganó.
+- **Poner a prueba la hipótesis.** Triplicar el backbone dio el mismo techo (1.0712 frente a 1.0714):
+  el límite era del enfoque, no del tamaño.
 - **Ruido antes que decimales.** Agrupar por prompt evita fugas, y la desviación entre folds dice
-  cuándo una mejora es real. Por eso 1.0435 se reporta como empate y no como victoria.
+  cuándo una mejora es real. Por eso los ensembles (1.0435 y 1.0427) no se reportan como victoria.
 - **El texto largo es parte del problema.** Cerca del 48 % de las filas excede ~512 tokens y casi
   todo el largo está en las respuestas, así que el truncado conserva el prompt y recorta por campo.
